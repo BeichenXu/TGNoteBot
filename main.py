@@ -1,19 +1,37 @@
 import os
+import json
 import requests
+import gspread
 from flask import Flask, request
 from datetime import datetime
+from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 
 BOT_TOKEN = "7022294426:AAE6CTpXjDQslaQs37cRXlzfREPqy444z3k"
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-def get_btc_price():
+def get_price(symbol):
     try:
-        res = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=2)
+        res = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}", timeout=2)
         return round(float(res.json()["price"]), 2)
     except:
         return "N/A"
+
+def init_sheet():
+    json_data = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    info = json.loads(json_data)
+    creds = Credentials.from_service_account_info(info, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    client = gspread.authorize(creds)
+    return client
+
+def log_to_sheet(timestamp, message, btc, eth):
+    try:
+        client = init_sheet()
+        sheet = client.open("TG Notes").sheet1
+        sheet.append_row([timestamp, message, btc, eth])
+    except Exception as e:
+        print("Sheet write error:", e)
 
 @app.route("/", methods=["POST"])
 def telegram_webhook():
@@ -26,13 +44,18 @@ def telegram_webhook():
     user_text = message.get("text", "")
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    btc = get_btc_price()
-    reply = f"[{timestamp}] {user_text}\\nBTC/USD = ${btc}"
+    btc = get_price("BTCUSDT")
+    eth = get_price("ETHUSDT")
+    reply = f"[{timestamp}] {user_text}\nBTC/USD = ${btc}\nETH/USD = ${eth}"
 
+    # 发 Telegram 消息
     requests.post(f"{TELEGRAM_API}/sendMessage", json={
         "chat_id": chat_id,
         "text": reply
     })
+
+    # 写入 Google Sheet
+    log_to_sheet(timestamp, user_text, btc, eth)
 
     return "ok", 200
 
