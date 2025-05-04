@@ -31,11 +31,14 @@ def init_sheet():
 
 def log_to_sheet(timestamp, message, btc, eth):
     try:
+        print("Preparing to write to sheet...")
         client = init_sheet()
         sheet = client.open("TGNoteBot").sheet1
+        print("Appending row...")
         sheet.append_row([timestamp, message, btc, eth])
+        print("✅ Row written.")
     except Exception as e:
-        print("Sheet write error:", e)
+        print("❌ Sheet write error:", e)
 
 @app.route("/", methods=["POST"])
 def telegram_webhook():
@@ -46,6 +49,8 @@ def telegram_webhook():
     message = data["message"]
     chat_id = message["chat"]["id"]
     user_text = message.get("text", "")
+
+    print(f"Incoming message: {user_text}")
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     btc = get_price("BTCUSDT")
