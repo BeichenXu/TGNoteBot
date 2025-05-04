@@ -28,7 +28,7 @@ def init_sheet():
 def log_to_sheet(timestamp, message, btc, eth):
     try:
         client = init_sheet()
-        sheet = client.open("TG Notes").sheet1
+        sheet = client.open("TGNoteBot").sheet1
         sheet.append_row([timestamp, message, btc, eth])
     except Exception as e:
         print("Sheet write error:", e)
@@ -48,13 +48,11 @@ def telegram_webhook():
     eth = get_price("ETHUSDT")
     reply = f"[{timestamp}] {user_text}\nBTC/USD = ${btc}\nETH/USD = ${eth}"
 
-    # 发 Telegram 消息
     requests.post(f"{TELEGRAM_API}/sendMessage", json={
         "chat_id": chat_id,
         "text": reply
     })
 
-    # 写入 Google Sheet
     log_to_sheet(timestamp, user_text, btc, eth)
 
     return "ok", 200
