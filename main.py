@@ -21,7 +21,11 @@ def get_price(symbol):
 def init_sheet():
     json_data = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     info = json.loads(json_data)
-    creds = Credentials.from_service_account_info(info, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    creds = Credentials.from_service_account_info(info, scopes=[
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+])
+
     client = gspread.authorize(creds)
     return client
 
